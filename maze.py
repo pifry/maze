@@ -36,14 +36,6 @@ class TextNode(Node):
         ret_str += "\033[0m" if not self.S or not self.S.connected else ""
         return ret_str
 
-class SvgNode(Node):
-    def __repr__(self) -> str:
-        ret_str = "|" if not self.W or not self.W.connected else " "
-        ret_str += "\033[4m" if not self.S or not self.S.connected else ""
-        ret_str += self.char
-        ret_str += "\033[0m" if not self.S or not self.S.connected else ""
-        return ret_str
-
 
 def connect_horizontal(node_a, node_b):
     node_a.E = Node.Edge(node_a, node_b)
@@ -118,14 +110,14 @@ class SvgMaze(Maze):
 
         for line_no, line in enumerate(self.graph):
             for node_no, node in enumerate(line):
-                if node.W and node.W.connected:
+                if node.W and not node.W.connected:
                     ret += f'<line x1="{0 + node_no * 10}" y1="{0 + line_no * 10}" x2="{0 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
-                if node.S and node.S.connected:
+                if node.S and not node.S.connected:
                     ret += f'<line x1="{0 + node_no * 10}" y1="{10 + line_no * 10}" x2="{10 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
 
         ret += '</svg>\n'
         return ret
 
 
-maze = SvgMaze(50, 50, start=(25,24), end=(25,27))
+maze = SvgMaze(50, 50)
 print(maze)
