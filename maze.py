@@ -36,6 +36,14 @@ class TextNode(Node):
         ret_str += "\033[0m" if not self.S or not self.S.connected else ""
         return ret_str
 
+class SvgNode(Node):
+    def __repr__(self) -> str:
+        ret_str = "|" if not self.W or not self.W.connected else " "
+        ret_str += "\033[4m" if not self.S or not self.S.connected else ""
+        ret_str += self.char
+        ret_str += "\033[0m" if not self.S or not self.S.connected else ""
+        return ret_str
+
 
 def connect_horizontal(node_a, node_b):
     node_a.E = Node.Edge(node_a, node_b)
@@ -97,6 +105,27 @@ class Maze:
             ret += "|\n"
         return ret
 
+class SvgMaze(Maze):
+    def __repr__(self) -> str:
+        x_size = len(self.graph[0])
+        y_size = len(self.graph)
 
-maze = Maze(30, 30)
+        ret = f'<svg viewBox="0 0 {x_size * 10} {y_size * 10}" xmlns="http://www.w3.org/2000/svg" style="background-color:white">\n'
+        ret += f'<line x1="0" y1="0" x2="{x_size * 10}" y2="0" stroke="#40a1fb" />\n'
+        ret += f'<line x1="0" y1="{y_size * 10}" x2="{x_size * 10}" y2="{y_size * 10}" stroke="#40a1fb" />\n'
+        ret += f'<line x1="0" y1="0" x2="0" y2="{y_size * 10}" stroke="#40a1fb" />\n'
+        ret += f'<line x1="{x_size * 10}" y1="0" x2="{x_size * 10}" y2="{y_size * 10}" stroke="#40a1fb" />\n'
+
+        for line_no, line in enumerate(self.graph):
+            for node_no, node in enumerate(line):
+                if node.W and node.W.connected:
+                    ret += f'<line x1="{0 + node_no * 10}" y1="{0 + line_no * 10}" x2="{0 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
+                if node.S and node.S.connected:
+                    ret += f'<line x1="{0 + node_no * 10}" y1="{10 + line_no * 10}" x2="{10 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
+
+        ret += '</svg>\n'
+        return ret
+
+
+maze = SvgMaze(50, 50, start=(25,24), end=(25,27))
 print(maze)
