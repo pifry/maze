@@ -15,35 +15,40 @@ class Node:
         def another_node(self, node):
             return self.a if self.b is node else self.b 
 
+    N = 0
+    S = 1
+    E = 2
+    W = 3
 
     def __init__(self) -> None:
         self.N, self.S, self.E, self.W = None, None, None, None
+        self.edges = [None, None, None, None]
         self.visited = False
         self.char = " "
 
-    def edges(self):
-        return [edge for edge in [self.N, self.S, self.E, self.W] if edge]
+    def existing_edges(self):
+        return [edge for edge in self.edges if edge]
 
     def unvisited_edges(self):
-        return [edge for edge in self.edges() if not edge.another_node(self).visited]
+        return [edge for edge in self.existing_edges() if not edge.another_node(self).visited]
 
 
 class TextNode(Node):
     def __repr__(self) -> str:
-        ret_str = "|" if not self.W or not self.W.connected else " "
-        ret_str += "\033[4m" if not self.S or not self.S.connected else ""
+        ret_str = "|" if not self.edges[Node.W] or not self.edges[Node.W].connected else " "
+        ret_str += "\033[4m" if not self.edges[Node.S] or not self.edges[Node.S].connected else ""
         ret_str += self.char
-        ret_str += "\033[0m" if not self.S or not self.S.connected else ""
+        ret_str += "\033[0m" if not self.edges[Node.S] or not self.edges[Node.S].connected else ""
         return ret_str
 
 
 def connect_horizontal(node_a, node_b):
-    node_a.E = Node.Edge(node_a, node_b)
-    node_b.W = node_a.E
+    node_a.edges[Node.E] = Node.Edge(node_a, node_b)
+    node_b.edges[Node.W] = node_a.edges[Node.E]
 
 def connect_vertical(node_a, node_b):
-    node_a.S = Node.Edge(node_a, node_b)
-    node_b.N = node_a.S
+    node_a.edges[Node.S] = Node.Edge(node_a, node_b)
+    node_b.edges[Node.N] = node_a.edges[Node.S]
 
 
 class Maze:
@@ -110,14 +115,14 @@ class SvgMaze(Maze):
 
         for line_no, line in enumerate(self.graph):
             for node_no, node in enumerate(line):
-                if node.W and not node.W.connected:
+                if node.edges[Node.W] and not node.edges[Node.W].connected:
                     ret += f'<line x1="{0 + node_no * 10}" y1="{0 + line_no * 10}" x2="{0 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
-                if node.S and not node.S.connected:
+                if node.edges[Node.S] and not node.edges[Node.S].connected:
                     ret += f'<line x1="{0 + node_no * 10}" y1="{10 + line_no * 10}" x2="{10 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
 
         ret += '</svg>\n'
         return ret
 
 
-maze = SvgMaze(50, 50)
+maze = Maze(50, 50)
 print(maze)
