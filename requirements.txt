@@ -1,1 +1,3 @@
+numpy
+scipy
 git+https://github.com/apparentlymart/python-stl.git

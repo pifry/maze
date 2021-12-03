@@ -1,5 +1,9 @@
 import random
 import sys
+from pathlib import Path
+from scipy.spatial.transform import Rotation as R
+import numpy as np
+import stl
 
 sys.setrecursionlimit(10000)
 
@@ -21,6 +25,8 @@ class Node:
     W = 3
     U = 4
     D = 5
+
+    PLANES = ['xz', 'xz', 'yz', 'yz', 'xy', 'xy']
 
     def __init__(self) -> None:
         #self.N, self.S, self.E, self.W = None, None, None, None
@@ -119,67 +125,92 @@ class Maze:
                 ret += "|\n"
         return ret
 
-class SvgMaze(Maze):
-    def __repr__(self) -> str:
-        x_size = len(self.graph[0])
-        y_size = len(self.graph)
+    TXT_FORMATS = ['svg']
+    BIN_FORMATS = ['stl']
 
-        ret = f'<svg viewBox="0 0 {x_size * 10} {y_size * 10}" xmlns="http://www.w3.org/2000/svg" style="background-color:white">\n'
-        ret += f'<line x1="0" y1="0" x2="{x_size * 10}" y2="0" stroke="#40a1fb" />\n'
-        ret += f'<line x1="0" y1="{y_size * 10}" x2="{x_size * 10}" y2="{y_size * 10}" stroke="#40a1fb" />\n'
-        ret += f'<line x1="0" y1="0" x2="0" y2="{y_size * 10}" stroke="#40a1fb" />\n'
-        ret += f'<line x1="{x_size * 10}" y1="0" x2="{x_size * 10}" y2="{y_size * 10}" stroke="#40a1fb" />\n'
+    def save(self, filename):
+        ext = Path(filename).suffix[1:]
+        mode = 'w' if ext in self.TXT_FORMATS else 'wb'
+        with open(filename, mode) as file:
+            getattr(self, f'save_{ext}')(file)
 
-        for line_no, line in enumerate(self.graph):
-            for node_no, node in enumerate(line):
-                if node.edges[Node.W] and not node.edges[Node.W].connected:
-                    ret += f'<line x1="{0 + node_no * 10}" y1="{0 + line_no * 10}" x2="{0 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
-                if node.edges[Node.S] and not node.edges[Node.S].connected:
-                    ret += f'<line x1="{0 + node_no * 10}" y1="{10 + line_no * 10}" x2="{10 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n'
+    def save_svg(self, file):
+        x_size = len(self.graph[0][0])
+        y_size = len(self.graph[0])
+        z_size = len(self.graph)
 
-        ret += '</svg>\n'
-        return ret
-
-
-#maze = Maze(20, 20, 20)
-#print(maze)
-import stl
-
-def add_square(solid, p, a, flipped=False, plane='xy'):
-    x,y,z = p
-    if plane == 'xy':
-        normal = (0,0,-1) if flipped else (0,0,1)
-        solid.add_facet(normal, [[x,y,z],[x+a,y,z],[x+a,y+a,z]])
-        solid.add_facet(normal, [[x,y,z],[x+a,y+a,z],[x,y+a,z]])
-    elif plane == 'xz':
-        normal = (0,-1,0) if flipped else (0,1,0)
-        solid.add_facet(normal, [[x,y,z],[x+a,y,z],[x+a,y,z+a]])
-        solid.add_facet(normal, [[x,y,z],[x+a,y,z+a],[x,y,z+a]])
-    elif plane == 'yz':
-        normal = (-1,0,0) if flipped else (1,0,0)
-        solid.add_facet(normal, [[x,y,z],[x,y+a,z],[x,y+a,z+a]])
-        solid.add_facet(normal, [[x,y,z],[x,y+a,z+a],[x,y,z+a]])
-
-class StlMaze(Maze):
-    def save(self, filename) -> None:
-
-        solid = stl.Solid(name="Maze")
+        file.write(f'<svg viewBox="0 0 {x_size * 10} {y_size * 10}" xmlns="http://www.w3.org/2000/svg" style="background-color:white">\n')
+        file.write(f'<line x1="0" y1="0" x2="{x_size * 10}" y2="0" stroke="#40a1fb" />\n')
+        file.write(f'<line x1="0" y1="{y_size * 10}" x2="{x_size * 10}" y2="{y_size * 10}" stroke="#40a1fb" />\n')
+        file.write(f'<line x1="0" y1="0" x2="0" y2="{y_size * 10}" stroke="#40a1fb" />\n')
+        file.write(f'<line x1="{x_size * 10}" y1="0" x2="{x_size * 10}" y2="{y_size * 10}" stroke="#40a1fb" />\n')
 
         for floor_no, floor in enumerate(self.graph):
             for line_no, line in enumerate(floor):
                 for node_no, node in enumerate(line):
                     if node.edges[Node.W] and not node.edges[Node.W].connected:
-                        add_square(solid, (node_no * 10,line_no * -10, floor_no * -10), 10, plane='yz')
+                        file.write(f'<line x1="{0 + node_no * 10}" y1="{0 + line_no * 10}" x2="{0 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n')
                     if node.edges[Node.S] and not node.edges[Node.S].connected:
-                        add_square(solid, (node_no * 10,line_no * -10, floor_no * -10), 10, plane='xz')
-                    if node.edges[Node.D] and not node.edges[Node.D].connected:
-                        add_square(solid, (node_no * 10,line_no * -10, floor_no * -10), 10, plane='xy')
+                        file.write(f'<line x1="{0 + node_no * 10}" y1="{10 + line_no * 10}" x2="{10 + node_no * 10}" y2="{10 + line_no * 10}" stroke="#40a1fb" stroke-linecap="round" />\n')
 
-        with open(filename, 'wb') as file:
-            solid.write_ascii(file)
+        file.write('</svg>\n')
 
-maze = StlMaze(10, 10, 10)
+    def save_stl(self, file):
+        solid = stl.Solid(name="Maze")
+
+        node_size = 10
+        wall_half_thick = 1
+        corridor_half_width = node_size/2 - wall_half_thick
+
+        for floor_no, floor in enumerate(self.graph):
+            for line_no, line in enumerate(floor):
+                for node_no, node in enumerate(line):
+                    for edge_no, edge in enumerate(node.edges):
+                        if edge and not edge.connected:
+                            plane = Node.PLANES[edge_no]
+                            z = -corridor_half_width if edge_no % 2 else corridor_half_width
+                            add_rect(solid, 
+                                (node_no*node_size,line_no*node_size,floor_no*node_size), 
+                                (0,0,z),
+                                (corridor_half_width, corridor_half_width, corridor_half_width, corridor_half_width), 
+                                plane=plane)
+
+        solid.write_ascii(file)
+
+
+def add_rect(solid, node_position, local_position, rect, flipped=False, plane='xy'):
+    x,y,z = local_position
+    wl,wr,hu,hd = rect
+
+    top_left = [x-wl, y-hu, z]
+    top_right = [x+wr, y-hu, z]
+    bot_left = [x-wl, y+hd, z]
+    bot_right = [x+wr, y+hd, z]
+
+    normal = (0,0,-1) if flipped else (0,0,1)
+
+    if plane == 'xy':
+        #r = R.identity()
+        r = R.from_rotvec(np.pi * np.array([1, 0, 0]))
+    elif plane == 'xz':
+        r = R.from_rotvec(np.pi/2 * np.array([1, 0, 0]))
+        normal = (0,-1,0) if flipped else (0,1,0)
+    elif plane == 'yz':
+        r = R.from_rotvec(np.pi/2 * np.array([0, 1, 0]))
+        normal = (-1,0,0) if flipped else (1,0,0)
+
+    top_left = np.add(node_position, r.apply(top_left))
+    top_right = np.add(node_position, r.apply(top_right))
+    bot_left = np.add(node_position, r.apply(bot_left))
+    bot_right = np.add(node_position, r.apply(bot_right))
+    normal = r.apply(normal)
+
+    solid.add_facet(normal, [bot_left,bot_right,top_right])
+    solid.add_facet(normal, [bot_left,top_right,top_left])
+
+
+maze = Maze(15,15,1)
 print(maze)
-maze.save('maze.stl')
+maze.save('maze.svg')
 
 
